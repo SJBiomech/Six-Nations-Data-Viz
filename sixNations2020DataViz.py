@@ -25,7 +25,8 @@ from io import BytesIO
 
 """ Load and format data """
 ## Load in data
-data = pd.DataFrame(pd.read_excel('C:/Users/Sam/Documents/Sports Data Science and Analysis/Rugby/Six Nations 2021/Fantasy Analysis.xlsx', sheet_name='2020 Stats Breakdown', engine='openpyxl'))
+data = pd.DataFrame(pd.read_excel('C:/Users/Sam/Documents/Sports Data Science and Analysis/Rugby/Six Nations 2021/Six Nations 2020 Player Data.xlsx',
+                                  sheet_name='2020 Stats Breakdown', engine='openpyxl'))
 # data.head(10)
 
 
@@ -49,24 +50,32 @@ data['T:DT']              = data['T per match']/data['DT per match']
 data80 = data[data['MP'] > 79]
 
 
-medianCarPerMat = round(data80['Carries per match'].median(), 1)
-medianMetPerCar = round(data80['Metres per carry'].median(), 1)
-meanCarPerMat = round(data80['Carries per match'].mean(), 1)
+## Calculate mean of carries/metres variables for inclusion in scatter later
+meanCarPerMat = round(data80['Carries per match'].mean(), 1) # Rounded to 1dp
 meanMetPerCar = round(data80['Metres per carry'].mean(), 1)
+# medianCarPerMat = round(data80['Carries per match'].median(), 1)
+# medianMetPerCar = round(data80['Metres per carry'].median(), 1)
 
 
-scatterPlayers = data80[data80['Carries per match'] > 13]
-scatterPlayers = scatterPlayers.append(data80[data80['Metres per carry'] > 10])
-# scatterPlayers = scatterPlayers.reset_index(drop=True)
+## Identify standout players for inclusion in the 3 graphs
+## These players were identified from an initial inspection of the raw graphs
+swarmPlayers = data[data['M'] > 310] # More than 310 metres carried
 
-swarmPlayers = data[data['M'] > 310].reset_index(drop=True)
+scatterPlayers = data80[data80['Carries per match'] > 13] # More than 13 carries per match
+scatterPlayers = scatterPlayers.append(data80[data80['Metres per carry'] > 10]) # More than 10 metres per carry
+# scatterPlayers = scatterPlayers.reset_index(drop=True) # This can be used to reset new df index and drop old index
 
-tDTPlayers = data80[data80['T:DT'] < 4.49]
-tDTPlayers = tDTPlayers.append(data80[data80['T per match'] > 20])
+tDTPlayers = data80[data80['T:DT'] < 4.49] # T:DT ratio greater that 4.49
+tDTPlayers = tDTPlayers.append(data80[data80['T per match'] > 20]) # More than 20 tackles per match
 # tDTPlayers = tDTPlayers.reset_index(drop=True)
 
+
+
+
 """ Setup theme for plots """
-theme = themepy.Theme()
+# Themepy is Peter McKeever's library. It lets you predefine plot parameters
+# and uses them for all subsequent plots unless they are reset.
+theme = themepy.Theme() 
 
 theme.set_theme() # ensures set to default matplotlib rcParams
 
@@ -96,19 +105,26 @@ sns.despine(left=True, bottom=True)
 ax.grid(axis='x', linewidth=.5, linestyle=':', zorder=1, color='lightgrey')
 
 # Add title and subtitle
+# This is the best way I was able to add both, positioning of main title was trial and error and unfortunately changes based on fig size
 plt.suptitle("Metres Made",
               **theme.title_font, fontsize=16, fontweight="bold", x=0.136, y=0.95)
 plt.title("Metres made by all players across the Six Nations 2020 tournament.",
           **theme.title_font, fontsize=10, loc='left')
 
 # Add names and colour for standout players
-sns.swarmplot(x=swarmPlayers['M'], color=theme.secondary_color)
+sns.swarmplot(x=swarmPlayers['M'], color=theme.secondary_color) # Replot standout players in red
 
-for x, name in zip(swarmPlayers['M'], swarmPlayers['PLAYER'].str.strip()):
+for x, name in zip(swarmPlayers['M'], swarmPlayers['PLAYER'].str.strip()): # Need to remove space at beginning of name i.e. " James..."
+    
+    # Plot name above marker
     if name != 'Jayden Hayward' and name != 'Nick Tompkins':
         plt.text(x-5,-0.03, name, fontsize=8, rotation=270)
+    
+    # Plot name below marker
     elif name == 'Nick Tompkins':
         plt.text(x-5,0.23, name, fontsize=8, rotation=270)
+    
+    # Plot name above but slightly higher
     elif name == 'Jayden Hayward':
         plt.text(x-5,-0.05, name, fontsize=8, rotation=270)
         
@@ -162,7 +178,8 @@ ax.plot([-10,30],[meanMetPerCar,meanMetPerCar],'k-', linestyle = "--", lw=0.75, 
 plt.text(20.1, meanMetPerCar-0.75, '{} m'.format(meanMetPerCar))
 plt.text(meanCarPerMat+0.1, 13.75, '{} carries'.format(meanCarPerMat), rotation=270)
 
-# Add standout players
+# Add standout players in colour and with name label
+# Similar to last plot, name positions have to be adjusted if they originally overlap
 for x,y,name in zip(scatterPlayers['Carries per match'],scatterPlayers['Metres per carry'], scatterPlayers['PLAYER'].str.strip()):
     
     # Name bottom and left of marker
@@ -173,7 +190,7 @@ for x,y,name in zip(scatterPlayers['Carries per match'],scatterPlayers['Metres p
                    s=50,
                    alpha=1,
                    zorder=6)
-        t = ax.text(x, y-0.55, name, fontsize=6, zorder=7, ha='right')
+        t = ax.text(x, y-0.55, name, fontsize=6, zorder=7, ha='right') # Saving text as variable means can add effects (outline) after
         
     # Name bottom and right of marker
     elif name == 'Hadleigh Parkes':
@@ -205,7 +222,7 @@ for x,y,name in zip(scatterPlayers['Carries per match'],scatterPlayers['Metres p
                    zorder=6)
         t = ax.text(x, y+0.25, name, fontsize=6, zorder=7)
         
-    t.set_path_effects([path_effects.withStroke(linewidth=3,foreground=theme.background)])    
+    t.set_path_effects([path_effects.withStroke(linewidth=3,foreground=theme.background)]) # Adds an outline/edge colour to text so stands out more
 
 
 # Add title and subtitle
@@ -265,8 +282,8 @@ sns.despine(right=True, top=True)
 # Add major gridlines
 plt.grid(axis='both', linestyle='-', alpha=0.25, color='lightgrey', lw=0.5)
 
-# DT to T ratio dividing lines and text in each division
-ax.plot([0, 24], [0, 6], # approx 1 in every 4
+# DT to T ratio dividing lines
+ax.plot([0, 24], [0, 6], # approx 1 in every 4 - Coordinates as [x1, x2], [y1, y2]
         ls="--", lw=0.75,
         color="w",
         zorder=2)
@@ -299,10 +316,10 @@ t3 = ax.text(25.75,3.5, "...1 DT \nevery 10 T...",
 t4 = ax.text(27.1,2.1, "...1 DT \nevery 18 T",
              alpha=0.75)
 
-for t in (t1, t2, t3, t4):
+for t in (t1, t2, t3, t4): # Addining text outline
     t.set_path_effects([path_effects.withStroke(linewidth=5,foreground=theme.background)])    
 
-# Add standout players
+# Add standout players - Similar to last plot
 for x,y,name in zip(tDTPlayers['T per match'],tDTPlayers['DT per match'], tDTPlayers['PLAYER'].str.strip()):
     
     # Name top and left of marker
@@ -380,5 +397,3 @@ plt.tight_layout()
 plt.show()
 
 # plt.savefig('dominantTackleScatter', bbox_inches='tight', dpi=300)
-
-
